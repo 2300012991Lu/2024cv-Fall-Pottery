@@ -1,5 +1,6 @@
 import numpy as np
 import plotly.graph_objects as go
+from plotly.offline import plot as poplot
 import utils.pyvox.parser as parser
 from scipy import ndimage
 ## Complete Visualization Functions for Pottery Voxel Dataset
@@ -92,7 +93,7 @@ def __read_vox__(path):
     return voxel_data
 
 
-def plot(voxel_matrix, save_dir):
+def plot(voxel_matrix, save_dir : str | None = None):
     '''
     plot the whole voxel matrix, without considering the labels (fragments)
     
@@ -112,11 +113,15 @@ def plot(voxel_matrix, save_dir):
             marker=dict(size=5, symbol='square', color='#ceabb2', line=dict(width=2,color='DarkSlateGrey',))))
     
     fig.update_layout()
-    fig.show()
+
+    if save_dir is not None:
+        poplot(fig, filename=save_dir)
+    else:
+        fig.show()
     
 
 
-def plot_frag(vox_pottery, save_dir):
+def plot_frag(vox_pottery, save_dir : str | None = None):
     '''
     plot the whole voxel with the labels (fragments)
     
@@ -147,7 +152,11 @@ def plot_frag(vox_pottery, save_dir):
     
     fig = go.Figure(data_list)
     fig.update_layout()
-    fig.show()
+
+    if save_dir is not None:
+        poplot(fig, filename=save_dir)
+    else:
+        fig.show()
 
 
 

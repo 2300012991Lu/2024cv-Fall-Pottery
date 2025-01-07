@@ -273,7 +273,7 @@ class FragmentDataLoader(DataLoader):
     def __iter__(self):
         # print('Start Iteration')
         self.__stop_iter = False
-        self.__preparer.perm = np.random.permutation(self.__length) if self.__shuffle else np.arange(self.__shuffle)
+        self.__preparer.perm = np.random.permutation(self.__length) if self.__shuffle else np.arange(self.__length)
         self.__preparer.stop_iter = False
         self.__preparer.running = True
         return self
@@ -290,7 +290,7 @@ class FragmentDataLoader(DataLoader):
 
         self.__stop_iter = self.__preparer.stop_iter
         batch = self.__preparer.get_cache()
-
+        
         return batch
     
     def __del__(self):

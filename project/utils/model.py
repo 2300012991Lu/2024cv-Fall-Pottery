@@ -78,27 +78,28 @@ class Generator(torch.nn.Module):
             )
 
         self.encoder = nn.Sequential(
-            *enblock(1, 8), # 32 (16)
-            *enblock(8, 16), # 16 (8)
-            *enblock(16, 16), # 8 (4)
-            *enblock(16, 32, decl = (cube_len == 64)), # 4
+            *enblock(1, 32), # 32 (16)
+            *enblock(32, 64), # 16 (8)
+            *enblock(64, 64), # 8 (4)
+            *enblock(64, 64, decl = (cube_len == 64)), # 4
         )
 
         def deblock(in_channel, out_channel, decl : bool = True, is_last : bool = False):
             return (
-                nn.ConvTranspose3d(in_channel, out_channel, kernel_size=4, padding=1, stride=2),
+                nn.ConvTranspose3d(in_channel, out_channel, kernel_size=3, padding=1, stride=1),
                 nn.BatchNorm3d(out_channel),
                 nn.ReLU(),
-                nn.ConvTranspose3d(out_channel, out_channel, kernel_size=4, padding=1, stride = 1 if decl else 2),
+                nn.ConvTranspose3d(out_channel, out_channel, kernel_size = 4 if decl else 3, padding=1, stride = 2 if decl else 1),
                 nn.BatchNorm3d(out_channel),
                 nn.Tanh() if is_last else nn.ReLU(),
             )
 
         self.decoder = nn.Sequential(
-            *deblock(32, 16, decl = (cube_len == 64)), # 8 (4),
-            *deblock(16, 16), # 16 (8)
-            *deblock(16, 8), # 32 (16)
-            *deblock(8, 1, is_last=True), # 64 (32)
+            *deblock(64, 64, decl = (cube_len == 64)), # 8 (4),
+            *deblock(64, 64), # 16 (8)
+            *deblock(64, 32), # 32 (16)
+            *deblock(32, 1, is_last=True), # 64 (32)
+            nn.Sigmoid(),
         )
 
     def forward_encode(self, x):
