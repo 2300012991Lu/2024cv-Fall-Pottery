@@ -91,7 +91,7 @@ class Generator(torch.nn.Module):
                 nn.ReLU(),
                 nn.ConvTranspose3d(out_channel, out_channel, kernel_size = 4 if decl else 3, padding=1, stride = 2 if decl else 1),
                 nn.BatchNorm3d(out_channel),
-                nn.Tanh() if is_last else nn.ReLU(),
+                nn.Sigmoid() if is_last else nn.ReLU(),
             )
 
         self.decoder = nn.Sequential(
@@ -99,7 +99,6 @@ class Generator(torch.nn.Module):
             *deblock(64, 64), # 16 (8)
             *deblock(64, 32), # 32 (16)
             *deblock(32, 1, is_last=True), # 64 (32)
-            nn.Sigmoid(),
         )
 
     def forward_encode(self, x):
@@ -112,3 +111,30 @@ class Generator(torch.nn.Module):
         # you may also find torch.view() useful
         # we strongly suggest you to write this method seperately to forward_encode(self, x) and forward_decode(self, x)   
         return self.forward_decode(self.forward_encode(x))
+    
+
+
+class JaccardDistance(nn.Module):
+
+    def __init__(self):
+        super(JaccardDistance, self).__init__()
+
+    def forward(self, A : torch.Tensor, B : torch.Tensor):
+        flat_A = A.reshape((-1,1))
+        flat_B = B.reshape((-1,1))
+        compare = torch.cat([flat_A, flat_B], dim=1)
+        cap = torch.min(compare, dim=1)[0].sum()
+        cup = torch.max(compare, dim=1)[0].sum()
+        return (cup - cap) / cup
+
+
+
+
+
+
+
+
+
+
+
+
