@@ -13,7 +13,7 @@ from torch import optim
 from torch.utils import data
 from torch import nn
 from utils.FragmentDataset import FragmentDataset, FragmentDataLoader, handler
-from utils.model import Generator, Discriminator
+from utils.model import Generator, Discriminator, JaccardDistance
 from utils.model_utils import generate, posprocessing, available_device
 import click
 from test import *
@@ -31,7 +31,8 @@ def train(args):
     batch_size = args.batch_size
     resume = args.resume
     G_lr = args.G_lr
-    # D_lr = args.D_lr
+    D_lr = args.D_lr
+    D_importance = args.D_importance
 
     dataset = FragmentDataset(dir_dataset, train=True, transform = lambda x : ndimage.zoom(x, zoom=(0.5,0.5,0.5)))
     dataloader = FragmentDataLoader(dataset, shuffle=True, batch_size=batch_size)
@@ -39,85 +40,77 @@ def train(args):
     n_batch = len(dataloader)
 
     G = Generator(cube_len=32)
-    D = Discriminator()
+    D = Discriminator(resolution=32)
     if resume:
+        checkpoint = torch.load(dir_checkpoint+'/model_generator_last.pth', weights_only=False)
+        G.load_state_dict(checkpoint['Generator'])
+        start_epoch = checkpoint['start']
+        print('..... %3d epoches finished' % (start_epoch))
         print('====> Resume from checkpoint')
-        G.load_state_dict(torch.load(dir_checkpoint+'/model_generator_last.pth', weights_only=True))
+    else:
+        start_epoch = 0
     G = G.to(available_device)
     D = D.to(available_device)
 
     G_optimizer = optim.AdamW(G.parameters(), lr=G_lr, betas=(0.5, 0.999))
-    # D_optimizer = optim.AdamW(D.parameters(), lr=D_lr, betas=(0.5, 0.999))
+    D_optimizer = optim.AdamW(D.parameters(), lr=D_lr, betas=(0.5, 0.999))
 
-    # G_loss1 = nn.BCELoss()
-    G_loss2 = nn.BCELoss()
-    # D_loss = nn.BCELoss()
+    G_loss1 = nn.MSELoss()          # Loss From Discriminater
+    G_loss2 = JaccardDistance()     # Loss From Ground Truth Label
+    D_loss = nn.BCELoss()
 
     print(f'Use device : {available_device}')
     print('-'*10, 'start training', '-'*10)
 
-    for epoch in range(n_epoch):
+    for epoch in range(start_epoch, n_epoch):
 
         total = 0
-        # d_total_loss = 0
+        d_total_loss = 0
         g_total_loss = 0
 
         for i, (voxels, vox_frag, _) in enumerate(dataloader):
 
-            with torch.no_grad():
-                size = len(voxels)
+            size = len(voxels)
 
             voxels = voxels.to(available_device)
             vox_frag = vox_frag.to(available_device)
 
-            '''
             real_label = torch.ones((size,1), dtype=torch.float).to(available_device)
             fake_label = torch.zeros((size,1), dtype=torch.float).to(available_device)
-            '''
+            label = torch.cat([real_label, fake_label], dim=0)
+
             
             # Train Discriminator
 
-            '''
             D.zero_grad()
             
-            output = D(voxels)
-            loss_d1 = D_loss(output, real_label)
-            loss_d1.backward()
-
             fake_vox = G(vox_frag)
-            output = D(fake_vox.detach())
-            loss_d2 = D_loss(output, fake_label)
-            loss_d2.backward()
+            total_vox = torch.cat([voxels, fake_vox.detach()], dim=0)
+            output = D(total_vox)
+            loss_d = D_loss(output, label)
+            loss_d.backward()
 
             D_optimizer.step()
-            '''
+
 
             # Train Generator
 
             G.zero_grad()
 
-            fake_vox = G(vox_frag)
-
-            loss_g2 = G_loss2(fake_vox, voxels)
-            loss_g2.backward(retain_graph=True)
-
-            '''
-            output = D(fake_vox)
-            loss_g1 = G_loss1(output, real_label)
-            loss_g1.backward()
-            '''
+            discriminate = D(fake_vox)
+            loss_g = G_loss1(discriminate, real_label) * D_importance + G_loss2(fake_vox, voxels) * (1 - D_importance)
+            loss_g.backward()
 
             G_optimizer.step()
 
+
             with torch.no_grad():
 
-                # dloss = loss_d1.item() + loss_d2.item()
-                # gloss = loss_g1.item() + loss_g2.item()
-                dloss = 0
-                gloss = loss_g2.item()
+                dloss = loss_d.item()
+                gloss = loss_g.item()
 
                 total += size
-                # d_total_loss += dloss * size
+                d_total_loss += dloss * size
                 g_total_loss += gloss * size
 
                 if i % 11 == 10:
@@ -128,8 +121,13 @@ def train(args):
         fake = fake_vox.detach().cpu()
         np.save(dir_output+f'/gen_{epoch+1}.npy', fake)
 
-        torch.save(G.state_dict(), dir_checkpoint+'/model_generator_last.pth')
-        torch.save(G.state_dict(), dir_checkpoint+f'/model_generator_{epoch+1}.pth')
+        state = {
+            'Generator' : G.state_dict(),
+            'start'     : epoch + 1,
+        }
+
+        torch.save(state, dir_checkpoint+'/model_generator_last.pth')
+        torch.save(state, dir_checkpoint+f'/model_generator_{epoch + 1}.pth')
 
 
 
