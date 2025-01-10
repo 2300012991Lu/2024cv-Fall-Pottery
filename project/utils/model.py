@@ -28,7 +28,7 @@ class Discriminator(torch.nn.Module):
                 nn.Conv3d(in_channel, out_channel, kernel_size=3, padding=1),
                 nn.BatchNorm3d(out_channel),
                 nn.LeakyReLU(0.2, inplace=True),
-                nn.Conv3d(out_channel, out_channel, kernel_size=4, padding=1, stride = 2 if decl else 1),
+                nn.Conv3d(out_channel, out_channel, kernel_size=3, padding=1, stride = 2 if decl else 1),
                 nn.BatchNorm3d(out_channel),
                 nn.ReLU()
             )
@@ -125,7 +125,7 @@ class JaccardDistance(nn.Module):
         compare = torch.cat([flat_A, flat_B], dim=2)
         cap = torch.min(compare, dim=2)[0].sum(1)
         cup = torch.max(compare, dim=2)[0].sum(1)
-        return (cup - cap) / cup
+        return ((cup - cap) / cup).mean()
 
 
 
