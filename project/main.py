@@ -28,10 +28,11 @@ def main():
     parser.add_argument('--test', action='store_true')
     parser.add_argument('--resume', action='store_true')
 
-    parser.add_argument('--epoch', type=int, default=100)
+    parser.add_argument('--epoch', type=int, default=500)
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--G_lr', type=float, default=0.0002)
     parser.add_argument('--D_lr', type=float, default=0.0002)
+    parser.add_argument('--D_importance', type=float, default=0.1)
 
     parser.add_argument('--checkpoint', type=str, default='./checkpoint')
     parser.add_argument('--dataset', type=str, default='./data_voxelized/data')
