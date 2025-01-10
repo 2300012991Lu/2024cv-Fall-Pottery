@@ -120,11 +120,11 @@ class JaccardDistance(nn.Module):
         super(JaccardDistance, self).__init__()
 
     def forward(self, A : torch.Tensor, B : torch.Tensor):
-        flat_A = A.reshape((-1,1))
-        flat_B = B.reshape((-1,1))
-        compare = torch.cat([flat_A, flat_B], dim=1)
-        cap = torch.min(compare, dim=1)[0].sum()
-        cup = torch.max(compare, dim=1)[0].sum()
+        flat_A = nn.Flatten()(A).unsqueeze(2)
+        flat_B = nn.Flatten()(B).unsqueeze(2)
+        compare = torch.cat([flat_A, flat_B], dim=2)
+        cap = torch.min(compare, dim=2)[0].sum(1)
+        cup = torch.max(compare, dim=2)[0].sum(1)
         return (cup - cap) / cup
 
 
