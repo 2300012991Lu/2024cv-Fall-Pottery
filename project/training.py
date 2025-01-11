@@ -42,8 +42,9 @@ def train(args):
     G = Generator(cube_len=32)
     D = Discriminator(resolution=32)
     if resume:
-        checkpoint = torch.load(dir_checkpoint+'/model_generator_last.pth', weights_only=False)
+        checkpoint = torch.load(dir_checkpoint+'/model_last.pth', weights_only=False)
         G.load_state_dict(checkpoint['Generator'])
+        D.load_state_dict(checkpoint['Discriminator'])
         start_epoch = checkpoint['start']
         print('..... %3d epoches finished' % (start_epoch))
         print('====> Resume from checkpoint')
@@ -122,12 +123,13 @@ def train(args):
         np.save(dir_output+f'/gen_{epoch+1}.npy', fake)
 
         state = {
-            'Generator' : G.state_dict(),
-            'start'     : epoch + 1,
+            'Generator'     : G.state_dict(),
+            'Discriminator' : D.state_dict(),
+            'start'         : epoch + 1,
         }
 
-        torch.save(state, dir_checkpoint+'/model_generator_last.pth')
-        torch.save(state, dir_checkpoint+f'/model_generator_{epoch + 1}.pth')
+        torch.save(state, dir_checkpoint+'/model_last.pth')
+        torch.save(state, dir_checkpoint+f'/model_{epoch + 1}.pth')
 
 
 

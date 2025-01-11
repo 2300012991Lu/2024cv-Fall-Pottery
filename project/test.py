@@ -18,17 +18,6 @@ def test(args):
     # You can also implement this function in training procedure, but be sure to
     # evaluate the model on test set and reserve the option to save both quantitative
     # and qualitative (generated .vox or visualizations) images.   
-    
-    def count_similar(real_vox, fake_vox, threshold=0.01):
-        real_vox = torch.flatten(real_vox, start_dim=1)
-        fake_vox = torch.flatten(fake_vox, start_dim=1)
-        vox_shape = real_vox.shape
-        real_vox = torch.where(real_vox > 0.5, 1, 0)
-        fake_vox = torch.where(fake_vox > 0.5, 1, 0)
-        err = torch.count_nonzero((fake_vox - real_vox).long(), dim=1)
-        correct = torch.where(err < threshold * vox_shape[1], 1, 0)
-        acc = correct.count_nonzero().cpu().item() / vox_shape[0]
-        return acc
 
     if args.check_data_only:
 
@@ -46,6 +35,17 @@ def test(args):
 
         return
     
+    def count_similar(real_vox, fake_vox, threshold=0.01):
+        real_vox = torch.flatten(real_vox, start_dim=1)
+        fake_vox = torch.flatten(fake_vox, start_dim=1)
+        vox_shape = real_vox.shape
+        real_vox = torch.where(real_vox > 0.5, 1, 0)
+        fake_vox = torch.where(fake_vox > 0.5, 1, 0)
+        err = torch.count_nonzero((fake_vox - real_vox).long(), dim=1)
+        correct = torch.where(err < threshold * vox_shape[1], 1, 0)
+        acc = correct.count_nonzero().cpu().item() / vox_shape[0]
+        return acc
+    
     dir_dataset = args.dataset
     dir_checkpoint = args.checkpoint
     dir_output = args.out
@@ -59,7 +59,7 @@ def test(args):
     n_batch = len(dataloader)
 
     G = Generator(cube_len=32)
-    G.load_state_dict(torch.load(dir_checkpoint+'/model_generator_last.pth', weights_only=True))
+    G.load_state_dict(torch.load(dir_checkpoint+'/model_last.pth', weights_only=True))
     G = G.to(available_device)
 
     print(f'Use device : {available_device}')
@@ -83,7 +83,7 @@ def test(args):
 
                 fake_vox = G(vox_frag)
 
-                correct = int(count_similar(voxels, fake_vox, threshold=0.05) * size)
+                correct = int(count_similar(voxels, fake_vox, threshold=0.08) * size)
                 total_correct += correct
                 total += size
 
