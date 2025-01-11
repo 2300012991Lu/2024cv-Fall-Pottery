@@ -194,78 +194,73 @@ class FragmentDataLoader(DataLoader):
     '''
     class DataPreparer(Thread):
 
-        def __init__(self, dataset, batch_size):
+        def __init__(self, dataset, batch_size, shuffle):
             super().__init__()
 
-            self.running = False
             self.stop_iter = True
-            self.perm = None
 
             self.load_finished = False
             self.__cache = None
 
+            self.__shuffle = shuffle
             self.__batch_size = batch_size
             self.__dataset = dataset
             self.__length = len(self.__dataset)
             self.__start = 0
+            self.__perm = np.random.permutation(self.__length) if self.__shuffle else np.arange(self.__length)
 
         def run(self):
             global is_exit
             while not is_exit:
-                if self.running:
 
-                    while self.load_finished:
-                        sleep(2)
-                        # print('Preparer waiting ...')
+                while self.load_finished:
+                    sleep(2)
+                    # print('Preparer waiting ...')
+                
+                # print('Start Loading')
+                del self.__cache
+
+                stop = self.__start + self.__batch_size
+                stop = min(stop, self.__length)
+                
+                choice = self.__perm[self.__start : stop]
                     
-                    # print('Start Loading')
-                    del self.__cache
+                batch_vox = []
+                batch_vox_frag = []
+                batch_frag = []
+                for idx in choice:
+                    vox, vox_frag, frag = self.__dataset[idx]
+                    batch_vox.append(vox)
+                    batch_vox_frag.append(vox_frag)
+                    batch_frag.append(frag)
 
-                    stop = self.__start + self.__batch_size
-                    stop = min(stop, self.__length)
-                    
-                    choice = self.perm[self.__start : stop]
-                        
-                    batch_vox = []
-                    batch_vox_frag = []
-                    batch_frag = []
-                    for idx in choice:
-                        vox, vox_frag, frag = self.__dataset[idx]
-                        batch_vox.append(vox)
-                        batch_vox_frag.append(vox_frag)
-                        batch_frag.append(frag)
+                self.__cache = (
+                    torch.from_numpy(np.array(batch_vox)).float().unsqueeze(1),
+                    torch.from_numpy(np.array(batch_vox_frag)).float().unsqueeze(1),
+                    batch_frag
+                )
+                self.load_finished = True
+                self.__start = stop
 
-                    self.__cache = (
-                        torch.from_numpy(np.array(batch_vox)).float().unsqueeze(1),
-                        torch.from_numpy(np.array(batch_vox_frag)).float().unsqueeze(1),
-                        batch_frag
-                    )
-                    self.load_finished = True
-                    self.__start = stop
+                if self.__start >= self.__length:
+                    self.__perm = np.random.permutation(self.__length) if self.__shuffle else np.arange(self.__length)
+                    self.__start = 0
+                    self.stop_iter = True
 
-                    if self.__start >= self.__length:
-                        self.running = False
-                        self.stop_iter = True
-                        self.__start = 0
+                # print('Finish Loading')
 
-                    # print('Finish Loading')
-            
-                else:
-                    sleep(4)
-                    # print('Preparer sleeping ...')
             return
         
         def get_cache(self):
             cache = deepcopy(self.__cache)
-            self.load_finished = self.stop_iter
+            self.load_finished = False
             return cache
 
 
     def __init__(self, dataset : FragmentDataset, shuffle : bool = False, batch_size : int = 64):
-        self.__shuffle = shuffle
         self.__length = len(dataset)
         self.__batch_size = batch_size
-        self.__preparer = FragmentDataLoader.DataPreparer(dataset, batch_size)
+        self.__preparer = FragmentDataLoader.DataPreparer(dataset, batch_size, shuffle)
         self.__preparer.setDaemon(True)
         self.__preparer.start()
 
@@ -273,9 +268,7 @@ class FragmentDataLoader(DataLoader):
     def __iter__(self):
         # print('Start Iteration')
         self.__stop_iter = False
-        self.__preparer.perm = np.random.permutation(self.__length) if self.__shuffle else np.arange(self.__length)
         self.__preparer.stop_iter = False
-        self.__preparer.running = True
         return self
     
     def __next__(self):
@@ -286,6 +279,7 @@ class FragmentDataLoader(DataLoader):
 
         if self.__stop_iter:
             self.__stop_iter = False
+            self.__preparer.stop_iter = False
             raise StopIteration
 
         self.__stop_iter = self.__preparer.stop_iter
