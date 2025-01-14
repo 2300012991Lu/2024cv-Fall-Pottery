@@ -34,7 +34,7 @@ def train(args):
     D_lr = args.D_lr
     D_importance = args.D_importance
 
-    dataset = FragmentDataset(dir_dataset, train=True, transform = lambda x : ndimage.zoom(x, zoom=(0.5,0.5,0.5)))
+    dataset = FragmentDataset(dir_dataset, train=True, transform = lambda x : ndimage.rotate(ndimage.zoom(x, zoom=(0.5,0.5,0.5)), 90 * np.random.randint(0, 4), reshape=False))
     dataloader = FragmentDataLoader(dataset, shuffle=True, batch_size=batch_size)
 
     n_batch = len(dataloader)

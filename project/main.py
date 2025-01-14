@@ -2,7 +2,6 @@ from training import train
 from test import test
 
 
-
 def main():
 
     # your hyperparam list MAY INCLUDE:
@@ -24,22 +23,22 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--train', action='store_true')
-    parser.add_argument('--test', action='store_true')
-    parser.add_argument('--resume', action='store_true')
+    parser.add_argument('--train', action='store_true', help='Start training')
+    parser.add_argument('--test', action='store_true', help='Start testing')
+    parser.add_argument('--resume', action='store_true', help='Resume training from last checkpoint')
 
     parser.add_argument('--epoch', type=int, default=500)
-    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--G_lr', type=float, default=0.0002)
     parser.add_argument('--D_lr', type=float, default=0.0002)
-    parser.add_argument('--D_importance', type=float, default=0.1)
+    parser.add_argument('--D_importance', type=float, default=0.1, help='Decide how important the loss given by discriminator is')
 
-    parser.add_argument('--checkpoint', type=str, default='./checkpoint')
-    parser.add_argument('--dataset', type=str, default='./data_voxelized/data')
-    parser.add_argument('--out', type=str, default='./out')
+    parser.add_argument('--checkpoint', type=str, default='./checkpoint', help='Directory of checkpoints.')
+    parser.add_argument('--dataset', type=str, default='./data_voxelized/data', help='Directory of Datasets. Do not give whether it is train or test.')
+    parser.add_argument('--out', type=str, default='./out', help='Directory of output voxels(in form of array).')
 
-    parser.add_argument('--check_data_only', action='store_true')
-    parser.add_argument('--check_index', type=int, default=1)
+    parser.add_argument('--check_data_only', action='store_true', help='Check data from train dataset')
+    parser.add_argument('--check_index', type=int, default=1, help='Check data from which epoch')
 
     args = parser.parse_args()
 
